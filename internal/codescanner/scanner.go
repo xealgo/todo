@@ -250,14 +250,17 @@ func (s *Scanner) ScanFile(filePath string) ([]ScanResult, error) {
 				comment := strings.TrimSpace(string(line))
 				startLine := lineNum
 
-				// Capture continuation lines (lines starting with // but no keyword)
+				// TODO: This is pretty basic and not very optimized. It needs to be able to
+				// ensure we don't bleed over into any other standard C# doc keywords, tags, or
+				// carries over to the actual function. This should be removed from here and
+				// written as a pure function so that we can test it in isolation.
 				for scanner.Scan() {
 					lineNum++
 					nextLine := scanner.Bytes()
 					trimmed := bytes.TrimSpace(nextLine)
 
 					// Check if it's a comment continuation (starts with //)
-					if !bytes.HasPrefix(trimmed, []byte("//")) || bytes.HasPrefix(trimmed, []byte("/// </")) {
+					if !bytes.HasPrefix(trimmed, []byte("//")) || bytes.HasPrefix(trimmed, []byte("/// <")) {
 						break
 					}
 
