@@ -5,7 +5,7 @@ import (
 	"context"
 	"fmt"
 	"os"
-	"path"
+	"path/filepath"
 	"strings"
 	"time"
 
@@ -36,7 +36,7 @@ func (mw *MarkdownGenerator) Generate(ctx context.Context, report scanner.ScanRe
 
 	timestamp := time.Now().Format("2006-01-02_15-04-05")
 	filename := fmt.Sprintf("code-scan-results_%s.md", timestamp)
-	outputPath := path.Join(mw.DestPath, filename)
+	outputPath := filepath.Join(mw.DestPath, filename)
 
 	file, err := os.Create(outputPath)
 	if err != nil {

@@ -8,7 +8,6 @@ import (
 	"fmt"
 	"io/fs"
 	"os"
-	"path"
 	"path/filepath"
 	"runtime"
 	"slices"
@@ -260,7 +259,7 @@ func (s *Scanner) worker(ctx context.Context, wg *sync.WaitGroup, jobs <-chan st
 func (s *Scanner) ScanFile(filePath string) ([]ScanResult, error) {
 	var results []ScanResult
 
-	file, err := os.Open(path.Join(s.srcPath, filePath))
+	file, err := os.Open(filepath.Join(s.srcPath, filePath))
 	if err != nil {
 		return results, err
 	}
