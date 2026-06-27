@@ -24,6 +24,9 @@ bin/
 dist/
 build/
 
+# Generator artifacts
+artifacts/
+
 # IDE and editor files
 .vscode/
 .idea/

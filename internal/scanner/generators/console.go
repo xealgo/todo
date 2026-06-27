@@ -1,46 +1,42 @@
-package codescanner
+package generators
 
 import (
+	"context"
 	"fmt"
 	"regexp"
 
 	"github.com/fatih/color"
+	"github.com/xealgo/todo/internal/scanner"
 )
 
-// ResultsWriter interface used to output the file scan results to different destinations (e.g., console, file, etc.)
-// and or formats such as markdown, html, pdf, csv, etc.
-type ResultsWriter interface {
-	Write([]ScanResult) error
-}
-
-type SimpleConsoleWriter struct {
+type ConsoleWriter struct {
 	//
 }
 
-var _ ResultsWriter = (*SimpleConsoleWriter)(nil)
+var _ scanner.ResultsGenerator = (*ConsoleWriter)(nil)
 
 var commentKeywordStripper = regexp.MustCompile(`^\s*//+\s*\w+:\s*`)
 var commentSlashStripper = regexp.MustCompile(`/{2,3}\s*`)
 
-// NewSimpleConsoleWriter creates a new instance of SimpleConsoleWriter.
-func NewSimpleConsoleWriter() *SimpleConsoleWriter {
-	return &SimpleConsoleWriter{}
+// NewConsoleWriter creates a new instance of ConsoleWriter.
+func NewConsoleWriter() *ConsoleWriter {
+	return &ConsoleWriter{}
 }
 
-// Write outputs the scan results to the console in a simple format.
-func (w *SimpleConsoleWriter) Write(results []ScanResult) error {
-	if len(results) == 0 {
+// Generate outputs the scan results to the console / terminal.
+func (w *ConsoleWriter) Generate(ctx context.Context, report scanner.ScanReport) error {
+	if report.Total == 0 {
 		fmt.Println("No results found.")
 	}
 
-	resultsGroup := make(map[string][]ScanResult)
+	resultsGroup := make(map[string][]scanner.ScanResult)
 	filesSeen := make(map[string]struct{})
 
-	for _, r := range results {
+	for _, r := range report.Results {
 		resultsGroup[r.Filename] = append(resultsGroup[r.Filename], r)
 	}
 
-	for _, r := range results {
+	for _, r := range report.Results {
 		if _, exists := filesSeen[r.Filename]; exists {
 			continue
 		}

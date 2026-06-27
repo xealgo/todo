@@ -1,4 +1,4 @@
-package codescanner
+package scanner
 
 import (
 	"bufio"
@@ -14,6 +14,7 @@ import (
 	"slices"
 	"strings"
 	"sync"
+	"time"
 )
 
 // DefaultKeywords defines the default keywords that the scanner will look for in the codebase.
@@ -27,13 +28,21 @@ type ScanResult struct {
 	Comment  string
 }
 
+// ScanReport aggregates the results of a scan, including the total number of findings, the individual results, and the
+// keywords that were searched for.
+type ScanReport struct {
+	Total    int
+	Results  []ScanResult
+	Keywords []string
+}
+
 // Scanner scans the codebase for specific comments.
 type Scanner struct {
 	keywords         [][]byte
 	numWorkers       int
 	srcPath          string
 	targetFileSuffix string
-	writers          []ResultsWriter
+	generators       []ResultsGenerator
 }
 
 // NewScanner initializes a new scanner with the given keywords.
@@ -42,7 +51,7 @@ func NewScanner(srcPath string) *Scanner {
 		numWorkers:       runtime.NumCPU(),
 		srcPath:          srcPath,
 		targetFileSuffix: ".cs",
-		writers:          []ResultsWriter{},
+		generators:       []ResultsGenerator{},
 	}
 
 	scanner.SetKeywords(DefaultKeywords...)
@@ -50,9 +59,9 @@ func NewScanner(srcPath string) *Scanner {
 	return scanner
 }
 
-// WithWriter adds a ResultsWriter to the scanner, allowing for flexible output of scan results.
-func (s *Scanner) WithWriter(w ResultsWriter) *Scanner {
-	s.writers = append(s.writers, w)
+// WithGenerator adds a ResultsGenerator to the scanner, allowing for flexible output of scan results.
+func (s *Scanner) WithGenerator(g ResultsGenerator) *Scanner {
+	s.generators = append(s.generators, g)
 	return s
 }
 
@@ -100,10 +109,13 @@ func (s *Scanner) Enumerate(ctx context.Context) ([]string, error) {
 }
 
 // Process scans the codebase for the specified keywords and returns the results.
-func (s *Scanner) Process(ctx context.Context) error {
+func (s *Scanner) Process(ctx context.Context, timeoutSeconds time.Duration) error {
+	timeout, cancel := context.WithTimeout(ctx, timeoutSeconds)
+	defer cancel()
+
 	files := make([]string, 0, 128)
 
-	if err := s.scanFiles(ctx, &files); err != nil {
+	if err := s.scanFiles(timeout, &files); err != nil {
 		return fmt.Errorf("failed to scan source files in path %s: %w", s.srcPath, err)
 	}
 
@@ -124,7 +136,7 @@ func (s *Scanner) Process(ctx context.Context) error {
 		for _, file := range files {
 			select {
 			case jobsChan <- file:
-			case <-ctx.Done():
+			case <-timeout.Done():
 				return
 			}
 		}
@@ -134,7 +146,7 @@ func (s *Scanner) Process(ctx context.Context) error {
 
 	for i := 0; i < s.numWorkers; i++ {
 		wg.Add(1)
-		go s.worker(ctx, &wg, jobsChan, outChan, errChan)
+		go s.worker(timeout, &wg, jobsChan, outChan, errChan)
 	}
 
 	var finalResults []ScanResult
@@ -168,13 +180,30 @@ func (s *Scanner) Process(ctx context.Context) error {
 		return strings.Compare(a.Filename, b.Filename)
 	})
 
+	uniqueKeywordsFound := make(map[string]struct{})
+	keywords := []string{}
+
+	for _, r := range finalResults {
+		if _, exits := uniqueKeywordsFound[r.Keyword]; !exits {
+			keywords = append(keywords, r.Keyword)
+		}
+
+		uniqueKeywordsFound[r.Keyword] = struct{}{}
+	}
+
+	report := ScanReport{
+		Total:    len(finalResults),
+		Keywords: keywords,
+		Results:  finalResults,
+	}
+
 	var writerErrors []error
 
-	if len(s.writers) == 0 {
+	if len(s.generators) == 0 {
 		writerErrors = append(writerErrors, fmt.Errorf("no output writers available"))
 	} else {
-		for _, w := range s.writers {
-			if err := w.Write(finalResults); err != nil {
+		for _, w := range s.generators {
+			if err := w.Generate(timeout, report); err != nil {
 				writerErrors = append(writerErrors, fmt.Errorf("error writing result: %w", err))
 			}
 		}

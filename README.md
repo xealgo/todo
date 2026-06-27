@@ -17,11 +17,15 @@ For this project, I wanted a super fast tool which I could run periodically on a
 This project is a rewrite of my original project and is currently bare-bones and not quite ready for use. The task list 
 is currently:
 
-- [ ] Implement CLI input handling
+- [x] Implement CLI input handling
 - [ ] Split out file parsing logic and make major improvements
 - [ ] Write many more tests around the existing code
-- [ ] Add yaml configuration support
-- [ ] Write additional output writers such as markdown, html, pdf, csv, etc.
+- [x] Add yaml configuration support (untested)
+- [ ] Write additional output writers such as markdown, html, pdf, csv, etc. 
+  - [x] Markdown
+  - [ ] HTML
+  - [ ] PDF
+  - [ ] CSV
 - [ ] Work on the web api and web UI
 
 The web portion will allow you to select a source path and then run the process, generating artifacts in various formats you select, as well as displaying the results.

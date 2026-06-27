@@ -1,4 +1,4 @@
-package codescanner
+package scanner
 
 import (
 	"strings"
