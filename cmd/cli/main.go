@@ -12,7 +12,7 @@ func main() {
 	ctx := context.Background()
 	timeout, _ := context.WithTimeout(ctx, 30*time.Second)
 
-	scanner := codescanner.NewScanner("/home/xealgo/Development/SaveDeath/Assets/Scripts")
+	scanner := codescanner.NewScanner("/root/path/to/your/codebase")
 	scanner.WithWriter(codescanner.NewSimpleConsoleWriter())
 	// scanner.SetKeywords("hello", "WORLD")
 
